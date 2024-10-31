@@ -38,6 +38,7 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+//from here
 /* Make a separate copy for parsing the program name. */
   char *file_name_copy = palloc_get_page(0);
   if (file_name_copy == NULL)
@@ -52,24 +53,9 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
-  palloc_free_page(file_name_copy);
   
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-  
-
-  struct thread *child = get_thread_by_tid(tid);
-    if (child != NULL) {
-        list_push_back(&thread_current()->child_threads, &child->child_elem);
-
-    /* Optionally, wait for the child to finish loading */
-    sema_down(&child->load_sema);   // Only if synchronization is needed
-
-    /* Check if loading was successful */
-    if (!child->load_success) {
-      return TID_ERROR;
-    }
-    }
   return tid;
 }
 
@@ -88,10 +74,6 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
-
-    /* Set the load_success flag and signal the semaphore. */
-  thread_current()->load_success = success;
-  sema_up(&thread_current()->load_sema);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -117,35 +99,44 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) 
+int process_wait(tid_t child_tid UNUSED)
 {
-  struct thread *cur = thread_current();
+    struct thread *cur = thread_current(); // 현재 thread 가져오기
+    struct list *childList = &cur->child_threads; // 자식 스레드 리스트
+    struct thread *child = NULL;
     struct list_elem *e;
 
-    /* Search for the child thread in the current thread's child_threads list */
-    for (e = list_begin(&cur->child_threads); e != list_end(&cur->child_threads); e = list_next(e)) {
-        struct thread *child = list_entry(e, struct thread, child_elem);
+    int retStatus = -1;
+    int found = 0;
+
+    /* 자식 스레드 리스트에서 해당 child_tid를 가진 스레드를 찾기 */
+    for (e = list_begin(childList); e != list_end(childList); e = list_next(e)) {
+        child = list_entry(e, struct thread, child_elem);
 
         if (child->tid == child_tid) {
-            /* Wait for the child to finish */
-            sema_down(&child->load_sema);
-
-            /* Retrieve the child's exit status */
-            int exit_status = child->exit_status;
-
-            /* Remove the child from the child_threads list */
-            list_remove(&child->child_elem);
-
-            /* Clean up the child’s resources, if needed */
-            // Example: 
-            palloc_free_page(child);
-
-            return exit_status;
+            found = 1; // child_tid를 가진 자식 스레드를 발견
+            break;
         }
     }
-  return -1;
+
+    if (found) {
+        // 자식 스레드가 종료될 때까지 대기
+        while (child->exit_flag == 0) {
+            thread_yield(); // 자식이 종료될 때까지 양보
+        }
+
+        // 종료 상태를 받아옴
+        retStatus = child->exit_status;
+
+        // 자식 스레드를 리스트에서 제거하고 리소스 정리
+        list_remove(&child->child_elem);
+        child->exit_flag = 2; // 부모가 리소스를 정리한 상태를 표시
+    }
+
+
+    return retStatus;
 }
+
 
 /* Free the current process's resources. */
 void
@@ -170,6 +161,10 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  cur->exit_flag = 1;
+  while (cur->exit_flag!=2){
+    thread_yield();
+  }
 }
 
 /* Sets up the CPU for running user code in the current
@@ -384,11 +379,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
+  printf("sfsg");
+
   /* Push arguments to stack. */
   push_to_stack(esp, argv, argc);  // 스택에 인자 푸시
     
-  // hex_dump((uintptr_t)*esp, *esp, PHYS_BASE - *esp, true);
-
+  hex_dump((uintptr_t)*esp, *esp, PHYS_BASE - *esp, true);
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;

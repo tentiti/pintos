@@ -97,15 +97,14 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+
+    //project 01
+    struct list_elem child_elem;  //my parents' children
+    int exit_status;  
+    int exit_flag;
+    struct list child_threads; //my children
+    struct list_elem current; //myself
 #endif
-
-   //project01
-   struct list_elem child_elem;  //my parents' children
-   struct list child_threads; //my children
-   int exit_status;  
-
-    struct semaphore load_sema;           /* Synchronization semaphore for loading. */
-    bool load_success;                    /* Indicates if the load was successful. */
    
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
@@ -146,8 +145,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-/* In thread.h */
-struct thread *get_thread_by_tid(tid_t tid);
 
 #endif /* threads/thread.h */

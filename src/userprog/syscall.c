@@ -13,8 +13,16 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+static void is_valid_vaddr(const void * pointer)
+{
+    if (pointer == NULL || !is_user_vaddr(pointer) ||
+        pagedir_get_page(thread_current()->pagedir, pointer) == NULL) {
+        exit(-1);
+    }
+}
+
 static void syscall_handler(struct intr_frame *f) {
-    // printf("System call invoked with esp: %p\n", f->esp);
+    printf("System call invoked with esp:\n");
     int *esp = f->esp;
     is_valid_vaddr(esp);
 
@@ -87,8 +95,8 @@ int wait(pid_t pid) {
 }
 
 int write(int fd, const void *buffer, unsigned size) {
-    is_valid_vaddr(buffer);
-
+    // is_valid_vaddr(buffer);
+    printf("writing");
     if (fd == 1) { // File descriptor 1 is stdout
         putbuf(buffer, size);
         return size;
