@@ -67,11 +67,11 @@ is_kernel_vaddr (const void *vaddr)
 }
 
 /* Checks if the given address is a valid user virtual address. */
-static inline bool
-is_valid_vaddr(const void *vaddr)
-{
-  /* 주소가 null이 아니고 사용자 영역에 있는지 확인 */
-  return vaddr != NULL && is_user_vaddr(vaddr);
+static inline void is_valid_vaddr(const void *vaddr) {
+    // if (vaddr == NULL || !is_user_vaddr(vaddr) || pagedir_get_page(thread_current()->pagedir, vaddr) == NULL) {
+    if (vaddr == NULL || !is_user_vaddr(vaddr)) {
+        thread_exit(); // Terminate the process if the address is invalid
+    }
 }
 
 /* Returns kernel virtual address at which physical address PADDR
