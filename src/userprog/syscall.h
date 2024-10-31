@@ -11,6 +11,7 @@ void syscall_init (void);
 void halt(void);
 void exit(int status);
 pid_t exec(const char *cmd_line);
+int wait (tid_t tid);
 int read(int fd, void *buffer, unsigned size);
 int write(int fd, const void *buffer, unsigned size);
 
