@@ -199,7 +199,6 @@ int wait(pid_t pid)
 int write(int fd, const void *buffer, unsigned size)
 {
     is_valid_vaddr(buffer);
-    // printf("writing\n");
     if (fd == 1)
     { // File descriptor 1 is stdout
         putbuf(buffer, size);
@@ -296,10 +295,10 @@ int open(const char *file)
             cur->fd[loc] = fp; // put it there
 
             // wait, am i the executable file?
-            if (!strcmp(thread_name(), file))
-            {
-                file_deny_write(fp);
-            }
+            // if (!strcmp(thread_name(), file))
+            // {
+            //     file_deny_write(fp);
+            // }
 
             return loc; // finish
         }
@@ -315,7 +314,7 @@ void close(int fd)
     if (cur->fd[fd] != NULL)
     {
         // 파일에 대한 쓰기 제한 해제
-        file_allow_write(cur->fd[fd]);
+        // file_allow_write(cur->fd[fd]);
         file_close(cur->fd[fd]);
         cur->fd[fd] = NULL;
     }
