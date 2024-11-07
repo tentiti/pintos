@@ -200,6 +200,11 @@ void process_exit(void)
 
   cur->exit_status = 0;
 
+  for (int i = 0; i < 256;  i++)
+  {
+    cur->fd[i] = NULL;
+  }
+
   if (cur->exit_flag == 0)
   {
     lock_acquire(&cur->exit_lock); // Add a lock for thread safety

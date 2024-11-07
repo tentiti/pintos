@@ -8,11 +8,13 @@
 // project02
 #include "filesys/filesys.h"
 #include <stdbool.h>
+struct lock file_using_lock;
 
 static void syscall_handler(struct intr_frame *);
 
 void syscall_init(void)
 {
+    lock_init(&file_using_lock);
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -89,7 +91,9 @@ static void syscall_handler(struct intr_frame *f)
         const char *file = *(const char **)(f->esp + 4);   // 첫 번째 인자: 파일 이름
         unsigned initial_size = *(unsigned *)(f->esp + 8); // 두 번째 인자: 초기 크기
         is_valid_vaddr(file);                              // 파일 이름의 유효성 확인
-        f->eax = create(file, initial_size);               // 반환 값을 eax에 저장
+        lock_acquire(&file_using_lock);
+        f->eax = create(file, initial_size); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
         break;
     }
 
@@ -97,7 +101,9 @@ static void syscall_handler(struct intr_frame *f)
     {
         const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
         is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
-        f->eax = remove(file);                           // 반환 값을 eax에 저장
+        lock_acquire(&file_using_lock);
+        f->eax = remove(file); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
         break;
     }
 
@@ -105,36 +111,50 @@ static void syscall_handler(struct intr_frame *f)
     {
         const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
         is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
-        f->eax = open(file);                             // 반환 값을 eax에 저장
+        lock_acquire(&file_using_lock);
+        f->eax = open(file); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
         break;
     }
 
     case SYS_CLOSE:
     {
         int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        close(fd);                     // 반환 값이 필요하지 않음 (void 함수)
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        close(fd); // 반환 값이 필요하지 않음 (void 함수)
+        lock_release(&file_using_lock);
         break;
     }
 
     case SYS_FILESIZE:
     {
         int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        f->eax = filesize(fd);         // 반환 값을 eax에 저장
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        f->eax = filesize(fd); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
         break;
     }
 
     case SYS_SEEK:
     {
-        int fd = *(int *)(f->esp + 4);                 // 첫 번째 인자: 파일 디스크립터
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        is_valid_fd(fd);
         unsigned position = *(unsigned *)(f->esp + 8); // 두 번째 인자: 위치
-        seek(fd, position);                            // 반환 값이 필요하지 않음 (void 함수)
+        lock_acquire(&file_using_lock);
+        seek(fd, position); // 반환 값이 필요하지 않음 (void 함수)
+        lock_release(&file_using_lock);
         break;
     }
 
     case SYS_TELL:
     {
         int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        f->eax = tell(fd);             // 반환 값을 eax에 저장
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        f->eax = tell(fd); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
         break;
     }
 
@@ -155,6 +175,10 @@ void exit(int status)
 {
     struct thread *cur = thread_current();
     cur->exit_status = status;
+    for (int i = 0; i < 256; i++)
+    {
+        file_close(cur->fd[i]);
+    }
     printf("%s: exit(%d)\n", cur->name, status);
     thread_exit();
 }
@@ -180,8 +204,8 @@ int write(int fd, const void *buffer, unsigned size)
     }
     else
     {
-        // Implement file writing if required
-        return -1;
+        // Implementing with fd
+        return file_write(thread_current()->fd[fd], buffer, size);
     }
 }
 
@@ -200,10 +224,10 @@ int read(int fd, void *buffer, unsigned size)
         }
         return i;
     }
-    else
+    else // files
     {
-        // Implement file reading if required
-        return -1;
+        // Implementing with fd
+        return file_read(thread_current()->fd[fd], buffer, size);
     }
 }
 
@@ -252,18 +276,56 @@ bool remove(const char *file)
 
 int open(const char *file)
 {
+    // try to open the file
+    struct file *fp = filesys_open(file);
+    if (fp == NULL)
+    {
+        return -1; // fopen error detect
+    }
+
+    // get the most front spot with no file i fd
+    int loc;
+    struct thread *cur = thread_current();
+    for (loc = 3; loc < 256; ++loc)
+    {
+        if (cur->fd[loc] == NULL)
+        {
+            cur->fd[loc] = fp; // put it there
+
+            // wait, am i the executable file?
+            // if (!strcmp(thread_name(), file))
+            // {
+            //     file_deny_write(fp);
+            // }
+
+            return loc; // finish
+        }
+    }
+
+    // no empty space in fd
+    return -1;
 }
+
 void close(int fd)
 {
+    struct thread *cur = thread_current();
+    file_close(cur->fd[fd]);
+    cur->fd[fd] = NULL;
 }
 int filesize(int fd)
 {
+    struct thread *cur = thread_current();
+    return file_length(cur->fd[fd]);
 }
 void seek(int fd, unsigned position)
 {
+    struct thread *cur = thread_current();
+    file_seek(cur->fd[fd], position);
 }
 unsigned tell(int fd)
 {
+    struct thread *cur = thread_current();
+    return file_tell(cur->fd[fd]);
 }
 
 // read, write -> improve from project 01.
