@@ -109,7 +109,7 @@ struct thread
    struct semaphore wait_sema; // make parent wait for me
 
    // project 02
-   struct file *fd[256];
+   struct file *fd[128];
 #endif
 
    /* Owned by thread.c. */

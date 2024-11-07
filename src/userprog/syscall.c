@@ -175,7 +175,7 @@ void exit(int status)
 {
     struct thread *cur = thread_current();
     cur->exit_status = status;
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < 128; i++)
     {
         file_close(cur->fd[i]);
     }
@@ -286,7 +286,7 @@ int open(const char *file)
     // get the most front spot with no file i fd
     int loc;
     struct thread *cur = thread_current();
-    for (loc = 3; loc < 256; ++loc)
+    for (loc = 2; loc < 128; ++loc)
     {
         if (cur->fd[loc] == NULL)
         {

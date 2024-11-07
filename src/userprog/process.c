@@ -200,7 +200,7 @@ void process_exit(void)
 
   cur->exit_status = 0;
 
-  for (int i = 0; i < 256; i++)
+  for (int i = 0; i < 128; i++)
   {
     file_close(cur->fd[i]);
     cur->fd[i] = NULL;
