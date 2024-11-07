@@ -71,7 +71,7 @@ static void syscall_handler(struct intr_frame *f)
         break;
 
     default:
-        printf("Unknown system call: %d\n", syscall_number);
+        // printf("Unknown system call: %d\n", syscall_number);
         exit(-1);
         break;
     }

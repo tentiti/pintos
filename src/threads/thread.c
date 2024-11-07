@@ -185,7 +185,9 @@ tid_t thread_create(const char *name, int priority,
   list_init(&(t->child_threads));
   list_push_back(&(thread_current()->child_threads), &(t->current));
   t->exit_flag = 0;
+  t->exit_status = 0;
   sema_init(&t->wait_sema, 0);
+  lock_init(&t->exit_lock);
 
 #endif
 

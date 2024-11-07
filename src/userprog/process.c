@@ -131,8 +131,6 @@ start_process(void *file_name_)
 int process_wait(tid_t child_tid UNUSED)
 {
 
-  // while(1){}
-
   struct thread *cur = thread_current();        // 현재 thread 가져오기
   struct list *childList = &cur->child_threads; // 자식 스레드 리스트
   struct thread *child = NULL;
@@ -154,14 +152,6 @@ int process_wait(tid_t child_tid UNUSED)
     }
   }
 
-  if (child == NULL)
-  {
-    // 해당 child_tid를 가진 자식이 없을 때
-    // printf("Child with tid: %d not found in child_threads list\n", child_tid);
-
-    return -1;
-  }
-
   if (found)
   {
 
@@ -175,6 +165,10 @@ int process_wait(tid_t child_tid UNUSED)
     {
       list_remove(e); // 리스트에 있을 때만 제거
     }
+  }
+  else
+  {
+    return -1;
   }
 
   // printf("child exit status: %d\n", retStatus);
@@ -204,10 +198,14 @@ void process_exit(void)
     pagedir_destroy(pd);
   }
 
+  cur->exit_status = 0;
+
   if (cur->exit_flag == 0)
   {
+    lock_acquire(&cur->exit_lock); // Add a lock for thread safety
     sema_up(&cur->wait_sema);
     cur->exit_flag = 1;
+    lock_release(&cur->exit_lock);
   }
   // thread_exit();
 }

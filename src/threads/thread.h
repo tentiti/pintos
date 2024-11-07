@@ -102,6 +102,7 @@ struct thread
    struct list_elem child_elem; // my parents' children
    int exit_status;
    int exit_flag;
+   struct lock exit_lock;
    struct list child_threads; // my children
    struct list_elem current;  // myself
 
