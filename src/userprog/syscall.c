@@ -293,10 +293,10 @@ int open(const char *file)
             cur->fd[loc] = fp; // put it there
 
             // wait, am i the executable file?
-            // if (!strcmp(thread_name(), file))
-            // {
-            //     file_deny_write(fp);
-            // }
+            if (!strcmp(thread_name(), file))
+            {
+                file_deny_write(fp);
+            }
 
             return loc; // finish
         }

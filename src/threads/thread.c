@@ -304,6 +304,7 @@ void thread_exit(void)
 
   for (int i = 0; i < 256; i++)
   {
+    // file_close(thread_current()->fd[i]);
     thread_current()->fd[i] = NULL;
   }
 
