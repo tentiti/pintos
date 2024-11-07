@@ -312,11 +312,15 @@ void close(int fd)
     file_close(cur->fd[fd]);
     cur->fd[fd] = NULL;
 }
+
 int filesize(int fd)
 {
     struct thread *cur = thread_current();
     return file_length(cur->fd[fd]);
 }
+
+// read, write -> improved from project 01 @ the top.
+
 void seek(int fd, unsigned position)
 {
     struct thread *cur = thread_current();
@@ -327,5 +331,3 @@ unsigned tell(int fd)
     struct thread *cur = thread_current();
     return file_tell(cur->fd[fd]);
 }
-
-// read, write -> improve from project 01.

@@ -110,6 +110,7 @@ struct thread
 
    // project 02
    struct file *fd[128];
+   struct file *executable_file;
 #endif
 
    /* Owned by thread.c. */

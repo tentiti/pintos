@@ -56,7 +56,6 @@ tid_t process_execute(const char *file_name)
 
   if (tid == TID_ERROR)
   {
-    // printf("Failed to create thread for: %s\n", program_name); // 디버깅 출력
     palloc_free_page(fn_copy);
   }
   else
@@ -65,16 +64,9 @@ tid_t process_execute(const char *file_name)
     if (child != NULL)
     {
       list_push_back(&cur->child_threads, &child->child_elem);
-      // printf("Added child thread (tid: %d) to parent (tid: %d)\n", child->tid, cur->tid);
-    }
-    else
-    {
-      // printf("Error retrieving child thread (tid: %d)\n", tid);
     }
   }
 
-  // if (tid == TID_ERROR)
-  //   palloc_free_page(fn_copy);
   return tid;
 }
 
@@ -89,8 +81,6 @@ start_process(void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  // printf("******B******\n");
-
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -98,16 +88,12 @@ start_process(void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load(file_name, &if_.eip, &if_.esp);
 
-  // printf("******A******\n");
-
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
   {
-    // printf("Failed to load process: %s\n", file_name); // 디버깅 출력
     thread_exit();
   }
-  // printf("Successfully loaded process: %s\n", file_name); // 디버깅 출력
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -204,6 +190,13 @@ void process_exit(void)
   {
     file_close(cur->fd[i]);
     cur->fd[i] = NULL;
+  }
+
+  if (cur->executable_file != NULL)
+  {
+    file_allow_write(cur->executable_file);
+    file_close(cur->executable_file);
+    cur->executable_file = NULL;
   }
 
   if (cur->exit_flag == 0)
@@ -309,7 +302,6 @@ static void push_to_stack(void **esp, char **argv, int argc);
    Returns true if successful, false otherwise. */
 bool load(const char *file_name, void (**eip)(void), void **esp)
 {
-  // printf("******E******\n");
   struct thread *t = thread_current();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -350,13 +342,12 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   file = filesys_open(program_name);
   if (file == NULL)
   {
-    // printf("load: %s: open failed\n", file_name);
     goto done;
   }
-  else
-  {
-    // printf("Successfully opened file: %s\n", file_name); // 파일 열기 성공
-  }
+
+  // no writing on executables
+  file_deny_write(file);
+  t->executable_file = file;
 
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
@@ -427,8 +418,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   if (!setup_stack(esp))
     goto done;
 
-  // printf("sfsg");
-
   /* Push arguments to stack. */
   push_to_stack(esp, argv, argc); // 스택에 인자 푸시
 
@@ -441,7 +430,10 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  file_close(file);
+  if (!success && file != NULL)
+  {
+    file_close(file);
+  }
   return success;
 }
 
