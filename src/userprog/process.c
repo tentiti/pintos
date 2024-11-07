@@ -75,8 +75,6 @@ tid_t process_execute(const char *file_name)
 static void
 start_process(void *file_name_)
 {
-  // printf("Entering start_process for file: %s\n", (char *)file_name_);
-
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
@@ -91,9 +89,7 @@ start_process(void *file_name_)
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
-  {
     thread_exit();
-  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -141,6 +137,11 @@ int process_wait(tid_t child_tid UNUSED)
   if (found)
   {
 
+    if (child->exit_flag == 1)
+    {
+      return -1; // 이미 종료된 자식 스레드를 다시 대기하려 할 때
+    }
+
     sema_down(&child->wait_sema);
 
     // 종료 상태를 받아옴
@@ -166,6 +167,9 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+
+  // stop abnormality
+  cur->exit_status = -1;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -352,7 +356,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
-    // printf("load: %s: error loading executable\n", file_name);
+    printf("load: %s: error loading executable\n", file_name);
     goto done;
   }
 

@@ -411,7 +411,6 @@ idle(void *idle_started_ UNUSED)
 
   for (;;)
   {
-    // printf("Idle thread running.\n");
     /* Let someone else run. */
     intr_disable();
     thread_block();
