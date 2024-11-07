@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-    printf("hej");
+    // printf("hej");
     if (argc != 5)
     {
         printf("argc must be 5. Your argc: %d\n", argc);
@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 	b=atoi(argv[2]);
 	c=atoi(argv[3]);
 	d=atoi(argv[4]);
-	printf("%d %d %d %d\n", a, b, c,d);
+	// printf("%d %d %d %d\n", a, b, c,d);
 	printf("%d %d\n", fibonacci(a), max_of_four_int(a, b, c, d));
 
 
