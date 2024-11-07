@@ -44,7 +44,6 @@ static void syscall_handler(struct intr_frame *f)
     int syscall_number = *esp;
     switch (syscall_number)
     {
-
         // project 01
     case SYS_HALT:
         halt();
@@ -67,12 +66,16 @@ static void syscall_handler(struct intr_frame *f)
 
     case SYS_WRITE:
         is_valid_vaddr(esp + 5);
+        lock_acquire(&file_using_lock);
         f->eax = write(*(int *)(esp + 1), *(const void **)(esp + 2), *(unsigned *)(esp + 3));
+        lock_release(&file_using_lock);
         break;
 
     case SYS_READ:
         is_valid_vaddr(esp + 5);
+        lock_acquire(&file_using_lock);
         f->eax = read(*(int *)(esp + 1), *(void **)(esp + 2), *(unsigned *)(esp + 3));
+        lock_release(&file_using_lock);
         break;
 
     case SYS_FIBONACCI:
@@ -309,8 +312,13 @@ int open(const char *file)
 void close(int fd)
 {
     struct thread *cur = thread_current();
-    file_close(cur->fd[fd]);
-    cur->fd[fd] = NULL;
+    if (cur->fd[fd] != NULL)
+    {
+        // 파일에 대한 쓰기 제한 해제
+        file_allow_write(cur->fd[fd]);
+        file_close(cur->fd[fd]);
+        cur->fd[fd] = NULL;
+    }
 }
 
 int filesize(int fd)
