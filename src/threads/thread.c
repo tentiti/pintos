@@ -97,7 +97,12 @@ void thread_init(void)
   init_thread(initial_thread, "main", PRI_DEFAULT);
 #ifdef USERPROG
   list_init(&initial_thread->child_threads);
-  // initial_thread->exit_flag = 0;
+  initial_thread->exit_flag = 0;
+  initial_thread->exit_status = 0;
+  for (int i = 0; i < 256; i++)
+  {
+    initial_thread->fd[i] = NULL;
+  }
 #endif
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid();
@@ -188,6 +193,11 @@ tid_t thread_create(const char *name, int priority,
   t->exit_status = 0;
   sema_init(&t->wait_sema, 0);
   lock_init(&t->exit_lock);
+
+  for (int i = 0; i < 256; i++)
+  {
+    t->fd[i] = NULL;
+  }
 
 #endif
 

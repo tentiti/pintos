@@ -107,6 +107,9 @@ struct thread
    struct list_elem current;  // myself
 
    struct semaphore wait_sema; // make parent wait for me
+
+   // project 02
+   struct file *fd[256];
 #endif
 
    /* Owned by thread.c. */

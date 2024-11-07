@@ -5,6 +5,10 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+// project02
+#include "filesys/filesys.h"
+#include <stdbool.h>
+
 static void syscall_handler(struct intr_frame *);
 
 void syscall_init(void)
@@ -21,6 +25,14 @@ static void is_valid_vaddr(const void *pointer)
     }
 }
 
+static void is_valid_fd(int fdPos)
+{
+    if (thread_current()->fd[fdPos] == NULL)
+    {
+        exit(-1);
+    }
+}
+
 static void syscall_handler(struct intr_frame *f)
 {
 
@@ -28,9 +40,10 @@ static void syscall_handler(struct intr_frame *f)
     is_valid_vaddr(esp);
 
     int syscall_number = *esp;
-    // printf("System call invoked with esp: %d\n", syscall_number);
     switch (syscall_number)
     {
+
+        // project 01
     case SYS_HALT:
         halt();
         break;
@@ -69,6 +82,61 @@ static void syscall_handler(struct intr_frame *f)
         is_valid_vaddr(esp + 4);
         f->eax = max_of_four_int(*(int *)(esp + 1), *(int *)(esp + 2), *(int *)(esp + 3), *(int *)(esp + 4));
         break;
+
+        // project 02
+    case SYS_CREATE:
+    {
+        const char *file = *(const char **)(f->esp + 4);   // 첫 번째 인자: 파일 이름
+        unsigned initial_size = *(unsigned *)(f->esp + 8); // 두 번째 인자: 초기 크기
+        is_valid_vaddr(file);                              // 파일 이름의 유효성 확인
+        f->eax = create(file, initial_size);               // 반환 값을 eax에 저장
+        break;
+    }
+
+    case SYS_REMOVE:
+    {
+        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
+        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
+        f->eax = remove(file);                           // 반환 값을 eax에 저장
+        break;
+    }
+
+    case SYS_OPEN:
+    {
+        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
+        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
+        f->eax = open(file);                             // 반환 값을 eax에 저장
+        break;
+    }
+
+    case SYS_CLOSE:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        close(fd);                     // 반환 값이 필요하지 않음 (void 함수)
+        break;
+    }
+
+    case SYS_FILESIZE:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        f->eax = filesize(fd);         // 반환 값을 eax에 저장
+        break;
+    }
+
+    case SYS_SEEK:
+    {
+        int fd = *(int *)(f->esp + 4);                 // 첫 번째 인자: 파일 디스크립터
+        unsigned position = *(unsigned *)(f->esp + 8); // 두 번째 인자: 위치
+        seek(fd, position);                            // 반환 값이 필요하지 않음 (void 함수)
+        break;
+    }
+
+    case SYS_TELL:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        f->eax = tell(fd);             // 반환 값을 eax에 저장
+        break;
+    }
 
     default:
         // printf("Unknown system call: %d\n", syscall_number);
@@ -169,3 +237,33 @@ int max_of_four_int(int a, int b, int c, int d)
         max = d;
     return max;
 }
+
+// project02
+
+bool create(const char *file, unsigned initial_size)
+{
+    return filesys_create(file, initial_size);
+}
+
+bool remove(const char *file)
+{
+    return filesys_remove(file);
+}
+
+int open(const char *file)
+{
+}
+void close(int fd)
+{
+}
+int filesize(int fd)
+{
+}
+void seek(int fd, unsigned position)
+{
+}
+unsigned tell(int fd)
+{
+}
+
+// read, write -> improve from project 01.
