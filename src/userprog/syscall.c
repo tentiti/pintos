@@ -170,7 +170,6 @@ static void syscall_handler(struct intr_frame *f)
 
 void halt()
 {
-    // printf("halt called.\n");
     shutdown_power_off();
 }
 
@@ -207,6 +206,7 @@ int write(int fd, const void *buffer, unsigned size)
     else
     {
         // Implementing with fd
+        is_valid_fd(fd);
         return file_write(thread_current()->fd[fd], buffer, size);
     }
 }
@@ -214,6 +214,7 @@ int write(int fd, const void *buffer, unsigned size)
 int read(int fd, void *buffer, unsigned size)
 {
     is_valid_vaddr(buffer);
+    // is_valid_fd(fd);
     if (fd == 0)
     { // File descriptor 0 is stdin
         unsigned i;
@@ -229,6 +230,7 @@ int read(int fd, void *buffer, unsigned size)
     else // files
     {
         // Implementing with fd
+        is_valid_fd(fd);
         return file_read(thread_current()->fd[fd], buffer, size);
     }
 }
@@ -293,14 +295,7 @@ int open(const char *file)
         if (cur->fd[loc] == NULL)
         {
             cur->fd[loc] = fp; // put it there
-
-            // wait, am i the executable file?
-            // if (!strcmp(thread_name(), file))
-            // {
-            //     file_deny_write(fp);
-            // }
-
-            return loc; // finish
+            return loc;        // finish
         }
     }
 
@@ -311,13 +306,8 @@ int open(const char *file)
 void close(int fd)
 {
     struct thread *cur = thread_current();
-    if (cur->fd[fd] != NULL)
-    {
-        // 파일에 대한 쓰기 제한 해제
-        // file_allow_write(cur->fd[fd]);
-        file_close(cur->fd[fd]);
-        cur->fd[fd] = NULL;
-    }
+    file_close(cur->fd[fd]);
+    cur->fd[fd] = NULL;
 }
 
 int filesize(int fd)

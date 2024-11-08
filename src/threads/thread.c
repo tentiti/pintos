@@ -99,18 +99,6 @@ void thread_init(void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid();
 
-#ifdef USERPROG
-
-  initial_thread->exit_status = 0;
-
-  initial_thread->wait_called = false;
-
-  for (int i = 0; i < 128; i++)
-  {
-    initial_thread->fd[i] = NULL;
-  }
-
-#endif
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
