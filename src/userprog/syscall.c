@@ -214,7 +214,6 @@ int write(int fd, const void *buffer, unsigned size)
 int read(int fd, void *buffer, unsigned size)
 {
     is_valid_vaddr(buffer);
-    // is_valid_fd(fd);
     if (fd == 0)
     { // File descriptor 0 is stdin
         unsigned i;
