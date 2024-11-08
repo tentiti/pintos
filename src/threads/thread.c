@@ -101,6 +101,11 @@ void thread_init(void)
 
 #ifdef USERPROG
 
+  initial_thread->exit_flag = 0;
+  initial_thread->exit_status = 0;
+
+  initial_thread->wait_called = false;
+
   for (int i = 0; i < 128; i++)
   {
     initial_thread->fd[i] = NULL;
@@ -189,7 +194,8 @@ tid_t thread_create(const char *name, int priority,
 
 #ifdef USERPROG
 
-  initial_thread = running_thread();
+  t->wait_called = false;
+
   list_init(&(t->child_threads));
   list_push_back(&(thread_current()->child_threads), &(t->current));
   t->exit_flag = 0;
@@ -492,6 +498,7 @@ init_thread(struct thread *t, const char *name, int priority)
   {
     initial_thread->fd[i] = NULL;
   }
+  lock_init(&initial_thread->exit_lock);
 #endif
 
   old_level = intr_disable();

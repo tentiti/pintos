@@ -63,7 +63,18 @@ tid_t process_execute(const char *file_name)
     struct thread *child = get_thread_by_tid(tid);
     if (child != NULL)
     {
+      sema_down(&child->wait_sema);
+      if (child->exit_status == -1)
+      {
+        palloc_free_page(fn_copy);
+        return TID_ERROR;
+      }
       list_push_back(&cur->child_threads, &child->child_elem);
+    }
+    else
+    {
+      palloc_free_page(fn_copy);
+      return TID_ERROR;
     }
   }
 
@@ -89,7 +100,11 @@ start_process(void *file_name_)
   /* If load failed, quit. */
   palloc_free_page(file_name);
   if (!success)
+  {
+    thread_current()->exit_status = -1;
+    sema_up(&thread_current()->wait_sema);
     thread_exit();
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -119,44 +134,37 @@ int process_wait(tid_t child_tid UNUSED)
   struct list_elem *e;
 
   int retStatus = -1;
-  int found = 0;
+  bool found = false;
 
   /* 자식 스레드 리스트에서 해당 child_tid를 가진 스레드를 찾기 */
   for (e = list_begin(childList); e != list_end(childList); e = list_next(e))
   {
     child = list_entry(e, struct thread, child_elem);
-    // printf("checking child with  tid: %d\n", child->tid);
 
     if (child->tid == child_tid)
     {
-      found = 1; // child_tid를 가진 자식 스레드를 발견
+      found = true;
       break;
     }
   }
 
-  if (found)
-  {
-
-    if (child->exit_flag == 1)
-    {
-      return -1; // 이미 종료된 자식 스레드를 다시 대기하려 할 때
-    }
-
-    sema_down(&child->wait_sema);
-
-    // 종료 상태를 받아옴
-    retStatus = child->exit_status;
-
-    // 자식 스레드를 리스트에서 제거하고 리소스 정리
-    if (list_entry(e, struct thread, child_elem)->tid == child_tid)
-    {
-      list_remove(e); // 리스트에 있을 때만 제거
-    }
-  }
-  else
-  {
+  if (!found)
     return -1;
-  }
+
+  if (child->wait_called)
+    return -1;
+
+  if (child == NULL)
+    return -1;
+
+  child->wait_called = true;
+
+  sema_down(&child->wait_sema);
+
+  // 종료 상태를 받아옴
+  retStatus = child->exit_status;
+
+  list_remove(&child->child_elem);
 
   // printf("child exit status: %d\n", retStatus);
   return retStatus;
@@ -167,9 +175,6 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
-
-  // stop abnormality
-  cur->exit_status = -1;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -188,12 +193,15 @@ void process_exit(void)
     pagedir_destroy(pd);
   }
 
-  cur->exit_status = 0;
+  // cur->exit_status = 0;
 
   for (int i = 0; i < 128; i++)
   {
-    file_close(cur->fd[i]);
-    cur->fd[i] = NULL;
+    if (cur->fd[i] != NULL)
+    {
+      file_close(cur->fd[i]);
+      cur->fd[i] = NULL;
+    }
   }
 
   if (cur->executable_file != NULL)
@@ -210,7 +218,6 @@ void process_exit(void)
     cur->exit_flag = 1;
     lock_release(&cur->exit_lock);
   }
-  // thread_exit();
 }
 
 /* Sets up the CPU for running user code in the current
