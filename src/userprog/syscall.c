@@ -35,6 +35,138 @@ static void is_valid_fd(int fdPos)
     }
 }
 
+static void syscall_handler(struct intr_frame *f)
+{
+
+    int *esp = f->esp;
+    is_valid_vaddr(esp);
+
+    int syscall_number = *esp;
+    switch (syscall_number)
+    {
+        // project 01
+    case SYS_HALT:
+        halt();
+        break;
+
+    case SYS_EXIT:
+        is_valid_vaddr(esp + 1);
+        exit(*(esp + 1));
+        break;
+
+    case SYS_EXEC:
+        is_valid_vaddr(esp + 1);
+        f->eax = exec(*(const char **)(esp + 1));
+        break;
+
+    case SYS_WAIT:
+        is_valid_vaddr(esp + 1);
+        f->eax = wait(*(pid_t *)(esp + 1));
+        break;
+
+    case SYS_WRITE:
+        is_valid_vaddr(esp + 5);
+        lock_acquire(&file_using_lock);
+        f->eax = write(*(int *)(esp + 1), *(const void **)(esp + 2), *(unsigned *)(esp + 3));
+        lock_release(&file_using_lock);
+        break;
+
+    case SYS_READ:
+        is_valid_vaddr(esp + 5);
+        lock_acquire(&file_using_lock);
+        f->eax = read(*(int *)(esp + 1), *(void **)(esp + 2), *(unsigned *)(esp + 3));
+        lock_release(&file_using_lock);
+        break;
+
+    case SYS_FIBONACCI:
+        is_valid_vaddr(esp + 1);
+        f->eax = fibonacci(*(int *)(esp + 1));
+        break;
+
+    case SYS_MAX_OF_FOUR_INT:
+        is_valid_vaddr(esp + 4);
+        f->eax = max_of_four_int(*(int *)(esp + 1), *(int *)(esp + 2), *(int *)(esp + 3), *(int *)(esp + 4));
+        break;
+
+        // project 02
+    case SYS_CREATE:
+    {
+        const char *file = *(const char **)(f->esp + 4);   // 첫 번째 인자: 파일 이름
+        unsigned initial_size = *(unsigned *)(f->esp + 8); // 두 번째 인자: 초기 크기
+        is_valid_vaddr(file);                              // 파일 이름의 유효성 확인
+        lock_acquire(&file_using_lock);
+        f->eax = create(file, initial_size); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_REMOVE:
+    {
+        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
+        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
+        lock_acquire(&file_using_lock);
+        f->eax = remove(file); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_OPEN:
+    {
+        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
+        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
+        lock_acquire(&file_using_lock);
+        f->eax = open(file); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_CLOSE:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        close(fd); // 반환 값이 필요하지 않음 (void 함수)
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_FILESIZE:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        f->eax = filesize(fd); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_SEEK:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        is_valid_fd(fd);
+        unsigned position = *(unsigned *)(f->esp + 8); // 두 번째 인자: 위치
+        lock_acquire(&file_using_lock);
+        seek(fd, position); // 반환 값이 필요하지 않음 (void 함수)
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    case SYS_TELL:
+    {
+        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
+        is_valid_fd(fd);
+        lock_acquire(&file_using_lock);
+        f->eax = tell(fd); // 반환 값을 eax에 저장
+        lock_release(&file_using_lock);
+        break;
+    }
+
+    default:
+        // printf("Unknown system call: %d\n", syscall_number);
+        exit(-1);
+        break;
+    }
+}
 
 void halt()
 {
@@ -205,137 +337,4 @@ unsigned tell(int fd)
 {
     struct thread *cur = thread_current();
     return file_tell(cur->fd[fd]);
-}
-
-static void syscall_handler(struct intr_frame *f)
-{
-
-    int *esp = f->esp;
-    is_valid_vaddr(esp);
-
-    int syscall_number = *esp;
-    switch (syscall_number)
-    {
-        // project 01
-    case SYS_HALT:
-        halt();
-        break;
-
-    case SYS_EXIT:
-        is_valid_vaddr(esp + 1);
-        exit(*(esp + 1));
-        break;
-
-    case SYS_EXEC:
-        is_valid_vaddr(esp + 1);
-        f->eax = exec(*(const char **)(esp + 1));
-        break;
-
-    case SYS_WAIT:
-        is_valid_vaddr(esp + 1);
-        f->eax = wait(*(pid_t *)(esp + 1));
-        break;
-
-    case SYS_WRITE:
-        is_valid_vaddr(esp + 5);
-        lock_acquire(&file_using_lock);
-        f->eax = write(*(int *)(esp + 1), *(const void **)(esp + 2), *(unsigned *)(esp + 3));
-        lock_release(&file_using_lock);
-        break;
-
-    case SYS_READ:
-        is_valid_vaddr(esp + 5);
-        lock_acquire(&file_using_lock);
-        f->eax = read(*(int *)(esp + 1), *(void **)(esp + 2), *(unsigned *)(esp + 3));
-        lock_release(&file_using_lock);
-        break;
-
-    case SYS_FIBONACCI:
-        is_valid_vaddr(esp + 1);
-        f->eax = fibonacci(*(int *)(esp + 1));
-        break;
-
-    case SYS_MAX_OF_FOUR_INT:
-        is_valid_vaddr(esp + 4);
-        f->eax = max_of_four_int(*(int *)(esp + 1), *(int *)(esp + 2), *(int *)(esp + 3), *(int *)(esp + 4));
-        break;
-
-        // project 02
-    case SYS_CREATE:
-    {
-        const char *file = *(const char **)(f->esp + 4);   // 첫 번째 인자: 파일 이름
-        unsigned initial_size = *(unsigned *)(f->esp + 8); // 두 번째 인자: 초기 크기
-        is_valid_vaddr(file);                              // 파일 이름의 유효성 확인
-        lock_acquire(&file_using_lock);
-        f->eax = create(file, initial_size); // 반환 값을 eax에 저장
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_REMOVE:
-    {
-        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
-        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
-        lock_acquire(&file_using_lock);
-        f->eax = remove(file); // 반환 값을 eax에 저장
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_OPEN:
-    {
-        const char *file = *(const char **)(f->esp + 4); // 첫 번째 인자: 파일 이름
-        is_valid_vaddr(file);                            // 파일 이름의 유효성 확인
-        lock_acquire(&file_using_lock);
-        f->eax = open(file); // 반환 값을 eax에 저장
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_CLOSE:
-    {
-        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        is_valid_fd(fd);
-        lock_acquire(&file_using_lock);
-        close(fd); // 반환 값이 필요하지 않음 (void 함수)
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_FILESIZE:
-    {
-        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        is_valid_fd(fd);
-        lock_acquire(&file_using_lock);
-        f->eax = filesize(fd); // 반환 값을 eax에 저장
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_SEEK:
-    {
-        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        is_valid_fd(fd);
-        unsigned position = *(unsigned *)(f->esp + 8); // 두 번째 인자: 위치
-        lock_acquire(&file_using_lock);
-        seek(fd, position); // 반환 값이 필요하지 않음 (void 함수)
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    case SYS_TELL:
-    {
-        int fd = *(int *)(f->esp + 4); // 첫 번째 인자: 파일 디스크립터
-        is_valid_fd(fd);
-        lock_acquire(&file_using_lock);
-        f->eax = tell(fd); // 반환 값을 eax에 저장
-        lock_release(&file_using_lock);
-        break;
-    }
-
-    default:
-        // printf("Unknown system call: %d\n", syscall_number);
-        exit(-1);
-        break;
-    }
 }
