@@ -321,7 +321,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   // Parse Program Name
   char *save_ptr;
   char *program_name = strtok_r(file_name, " ", &save_ptr);
-  // printf("parsed program name: %s\n, parsed program code: %s\n", program_name, file_name);
 
   // 인자들을 배열에 저장
   char *argv[128]; // max is 128 byte so have some margins
@@ -444,7 +443,7 @@ static void push_to_stack(void **esp, char **argv, int argc)
   for (int i = argc - 1; i >= 0; i--)
   {
     int arg_length = strlen(argv[i]) + 1;
-    *esp -= arg_length;                 // 인자 문자열 길이만큼 스택을 감소
+    *esp -= arg_length;                 // 인자 문자열 길이만큼 스택포인터 감소
     arg_ptrs[i] = *esp;                 // 인자의 시작 주소 저장
     strlcpy(*esp, argv[i], arg_length); // 스택에 문자열 복사
   }
@@ -456,30 +455,28 @@ static void push_to_stack(void **esp, char **argv, int argc)
     *(uint8_t *)(*esp) = 0;  // 빈 공간을 0으로 채움
   }
 
-  // 각 인자의 주소를 스택에 저장 (argv 배열을 구성)
+  // 각 인자의 주소를 스택에 저장 (argv 배열 구성)
   for (int i = argc; i >= 0; i--)
   {
     *esp -= sizeof(char *);
     if (i == argc)
-      *((char **)*esp) = NULL; // argv[argc]는 NULL 포인터
+      *((char **)*esp) = NULL; // argv[argc]는 NULL 포인터 -> 마지막
     else
-      *((char **)*esp) = arg_ptrs[i];
+      *((char **)*esp) = arg_ptrs[i]; // 아니면 문자 저장
   }
 
-  // 현재 스택 포인터 위치를 `argv`로 사용하기 위해 포인터로 저장
+  // 현재 스택 포인터 위치를 'argv'로 스택에 저장
   char **argv_ptr = *esp;
-
-  // `argv` 포인터를 스택에 저장
   *esp -= sizeof(char **);
   *((char **)*esp) = argv_ptr;
 
-  // `argc`를 스택에 저장
+  // 'argc'를 스택에 저장
   *esp -= sizeof(int);
-  *((int *)*esp) = argc; // 직접 할당으로 `argc` 저장
+  *((int *)*esp) = argc;
 
   // fake return address 추가
   *esp -= sizeof(void *);
-  *((void **)*esp) = 0; // 직접 할당으로 0 저장
+  *((void **)*esp) = 0;
 }
 
 static bool install_page(void *upage, void *kpage, bool writable);
