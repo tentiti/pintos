@@ -166,7 +166,6 @@ int process_wait(tid_t child_tid UNUSED)
 
   list_remove(&child->child_elem);
 
-  // printf("child exit status: %d\n", retStatus);
   return retStatus;
 }
 
@@ -193,8 +192,6 @@ void process_exit(void)
     pagedir_destroy(pd);
   }
 
-  // cur->exit_status = 0;
-
   for (int i = 0; i < 128; i++)
   {
     if (cur->fd[i] != NULL)
@@ -211,13 +208,7 @@ void process_exit(void)
     cur->executable_file = NULL;
   }
 
-  if (cur->exit_flag == 0)
-  {
-    lock_acquire(&cur->exit_lock); // Add a lock for thread safety
     sema_up(&cur->wait_sema);
-    cur->exit_flag = 1;
-    lock_release(&cur->exit_lock);
-  }
 }
 
 /* Sets up the CPU for running user code in the current

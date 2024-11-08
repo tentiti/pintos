@@ -103,9 +103,8 @@ struct thread
    struct list child_threads;   // my children
    struct list_elem current;    // myself
 
-   struct lock exit_lock;
+   // struct lock exit_lock;
    int exit_status;
-   int exit_flag;
 
    struct semaphore wait_sema; // make parent wait for me
    bool wait_called;           // pass wait-twice
