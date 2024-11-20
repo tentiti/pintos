@@ -6,8 +6,12 @@
 #include <stdint.h>
 #include "threads/synch.h" // Include for semaphore
 
+#ifdef USERPROG
+extern bool thread_prior_aging;
+#endif
+
 /* States in a thread's life cycle. */
-enum thread_status
+enum thread_status g
 {
    THREAD_RUNNING, /* Running thread. */
    THREAD_READY,   /* Not running but ready to run. */
