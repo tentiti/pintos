@@ -182,27 +182,12 @@ void timer_print_stats(void)
   printf("Timer: %" PRId64 " ticks\n", timer_ticks());
 }
 
-// thread aging
-void thread_aging(struct thread *t, void *aux UNUSED)
-{
-  if (t->status == THREAD_READY)
-  {
-    t->priority++;
-    if (t->priority > PRI_MAX)
-    {
-      t->priority = PRI_MAX;
-    }
-  }
-}
-
 /* Timer interrupt handler. */
 static void
 timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
 
-  // aging
-  thread_foreach(thread_aging, NULL);
 
   struct list_elem *e = list_begin(&sleep_list);
 

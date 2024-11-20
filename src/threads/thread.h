@@ -161,4 +161,7 @@ int thread_get_recent_cpu(void);
 int thread_get_load_avg(void);
 struct thread *get_thread_by_tid(tid_t tid);
 
+// project 3
+void thread_aging(void);
+
 #endif /* threads/thread.h */

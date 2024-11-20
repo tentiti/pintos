@@ -54,11 +54,6 @@ static long long user_ticks;   /* # of timer ticks in user programs. */
 #define TIME_SLICE 4          /* # of timer ticks to give each thread. */
 static unsigned thread_ticks; /* # of timer ticks since last yield. */
 
-#ifdef USERPROG
-// project 3
-bool thread_prior_aging;
-#endif
-
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -91,6 +86,7 @@ static tid_t allocate_tid(void);
    finishes. */
 void thread_init(void)
 {
+  
   ASSERT(intr_get_level() == INTR_OFF);
 
   lock_init(&tid_lock);
@@ -119,6 +115,25 @@ void thread_start(void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down(&idle_started);
+}
+
+// aging happens here
+void thread_aging(void)
+{
+  struct list_elem *e = list_begin(&ready_list);
+
+  while (e != list_end(&ready_list))
+  {
+    struct thread *t = list_entry(e, struct thread, elem);
+
+    // 우선순위 증가
+    if (t->priority < PRI_MAX)
+    {
+      t->priority++;
+    }
+
+    e = list_next(e);
+  }
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -228,9 +243,11 @@ tid_t thread_create(const char *name, int priority,
   /* Add to run queue. */
   thread_unblock(t);
 
-  // yield if i do not have high priority
-  if (priority < thread_current()->priority)
+  // yield if i have high priority
+  if (priority > thread_current()->priority)
+  {
     thread_yield();
+  }
 
   return tid;
 }
@@ -379,14 +396,12 @@ void thread_foreach(thread_action_func *func, void *aux)
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void thread_set_priority(int new_priority)
 {
+  int old_priority = thread_current()->priority;
   thread_current()->priority = new_priority;
-  if (!list_empty(&ready_list))
+
+  if (old_priority > new_priority)
   {
-    struct thread *highest_priority_thread = list_entry(list_front(&ready_list), struct thread, elem);
-    if (new_priority < highest_priority_thread->priority)
-    {
-      thread_yield();
-    }
+    thread_yield();
   }
 }
 

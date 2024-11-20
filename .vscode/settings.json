@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "typeinfo": "c",
+        "vaddr.h": "c"
     }
 }

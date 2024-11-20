@@ -38,6 +38,9 @@
 #include "filesys/fsutil.h"
 #endif
 
+// project 3
+bool thread_prior_aging = false;
+
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
 
@@ -255,10 +258,13 @@ parse_options(char **argv)
       random_init(atoi(value));
     else if (!strcmp(name, "-mlfqs"))
       thread_mlfqs = true;
-#ifdef USERPROG
+
     else if (!strcmp(name, "-aging"))
+    {
+      printf("Detected -aging option. Enabling thread_prior_aging.\n");
       thread_prior_aging = true;
-#endif
+    }
+
 #ifdef USERPROG
     else if (!strcmp(name, "-ul"))
       user_page_limit = atoi(value);

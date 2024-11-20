@@ -8,3 +8,5 @@ tags
 *.tar.gz
 
 tests-org/
+tests/threads_old/
+tests/threads_new/
