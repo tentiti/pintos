@@ -6,3 +6,5 @@ tags
 *.o
 *.docx
 *.tar.gz
+
+tests-org/

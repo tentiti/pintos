@@ -228,6 +228,10 @@ tid_t thread_create(const char *name, int priority,
   /* Add to run queue. */
   thread_unblock(t);
 
+  // yield if i do not have high priority
+  if (priority < thread_current()->priority)
+    thread_yield();
+
   return tid;
 }
 
@@ -246,6 +250,15 @@ void thread_block(void)
   schedule();
 }
 
+// priority queue function
+bool thread_priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *t_a = list_entry(a, struct thread, elem);
+  struct thread *t_b = list_entry(b, struct thread, elem);
+
+  return t_a->priority > t_b->priority; // 높은 우선순위가 먼저
+}
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -262,7 +275,8 @@ void thread_unblock(struct thread *t)
 
   old_level = intr_disable();
   ASSERT(t->status == THREAD_BLOCKED);
-  list_push_back(&ready_list, &t->elem);
+  // list_push_back(&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, thread_priority_compare, NULL);
   t->status = THREAD_READY;
   intr_set_level(old_level);
 }
@@ -339,7 +353,8 @@ void thread_yield(void)
 
   old_level = intr_disable();
   if (cur != idle_thread)
-    list_push_back(&ready_list, &cur->elem);
+    // list_push_back(&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, thread_priority_compare, NULL);
   cur->status = THREAD_READY;
   schedule();
   intr_set_level(old_level);
@@ -365,6 +380,14 @@ void thread_foreach(thread_action_func *func, void *aux)
 void thread_set_priority(int new_priority)
 {
   thread_current()->priority = new_priority;
+  if (!list_empty(&ready_list))
+  {
+    struct thread *highest_priority_thread = list_entry(list_front(&ready_list), struct thread, elem);
+    if (new_priority < highest_priority_thread->priority)
+    {
+      thread_yield();
+    }
+  }
 }
 
 /* Returns the current thread's priority. */

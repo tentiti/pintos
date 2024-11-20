@@ -11,7 +11,7 @@ extern bool thread_prior_aging;
 #endif
 
 /* States in a thread's life cycle. */
-enum thread_status g
+enum thread_status
 {
    THREAD_RUNNING, /* Running thread. */
    THREAD_READY,   /* Not running but ready to run. */
@@ -116,8 +116,10 @@ struct thread
    // project 02
    struct file *fd[128];
    struct file *executable_file;
-#endif
 
+#endif
+   // project 04
+   int wake_me_up_at; // time to wake up
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */
 };
