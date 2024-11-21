@@ -30,8 +30,8 @@ static void busy_wait(int64_t loops);
 static void real_time_sleep(int64_t num, int32_t denom);
 static void real_time_delay(int64_t num, int32_t denom);
 
-// project 4
-struct list sleep_list;
+// project 3
+struct list sleeping_list;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -39,7 +39,7 @@ void timer_init(void)
 {
   pit_configure_channel(0, 2, TIMER_FREQ);
   intr_register_ext(0x20, timer_interrupt, "8254 Timer");
-  list_init(&sleep_list);
+  list_init(&sleeping_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -86,8 +86,8 @@ timer_elapsed(int64_t then)
   return timer_ticks() - then;
 }
 
-// timer_sleep util;
-bool sleep_list_compare(const struct list_elem *la, const struct list_elem *lb, void *aux UNUSED)
+// timer_sleep util - compare wake up time;
+bool sleep_list_wake_up_time_compare(const struct list_elem *la, const struct list_elem *lb, void *aux UNUSED)
 {
   struct thread *a = list_entry(la, struct thread, elem);
   struct thread *b = list_entry(lb, struct thread, elem);
@@ -113,7 +113,7 @@ void timer_sleep(int64_t ticks)
   enum intr_level old_level = intr_disable();
 
   cur->wake_me_up_at = wake_up_time;
-  list_insert_ordered(&sleep_list, &cur->elem, sleep_list_compare, NULL);
+  list_insert_ordered(&sleeping_list, &cur->elem, sleep_list_wake_up_time_compare, NULL);
   thread_block();
 
   intr_set_level(old_level);
@@ -188,24 +188,23 @@ timer_interrupt(struct intr_frame *args UNUSED)
 {
   ticks++;
 
+  struct list_elem *e = list_begin(&sleeping_list);
 
-  struct list_elem *e = list_begin(&sleep_list);
-
-  while (e != list_end(&sleep_list))
+  while (e != list_end(&sleeping_list)) // 리스트 순회 완료시 exit
   {
     struct thread *t = list_entry(e, struct thread, elem);
 
-    // wake-up time이 현재 tick보다 작거나 같으면 READY 상태로 전환
-    if (t->wake_me_up_at <= timer_ticks())
+    if (t->wake_me_up_at <= timer_ticks()) // 일어날 시간
     {
-      e = list_remove(e); // 리스트에서 제거
-      thread_unblock(t);  // READY 상태로 전환
+      e = list_remove(e); // sleeping_list에서 제거
+      thread_unblock(t);  // ready!
     }
-    else
+    else // 정렬된 리스트, 이제 나중에 일어날 것들이므로 신경 안써도 됨
     {
-      break; // 정렬된 리스트이므로, 더 이상 검사할 필요 없음
+      break;
     }
   }
+
   thread_tick();
 }
 

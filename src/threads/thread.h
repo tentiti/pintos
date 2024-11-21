@@ -163,5 +163,7 @@ struct thread *get_thread_by_tid(tid_t tid);
 
 // project 3
 void thread_aging(void);
+void thread_wake_up(void);
+bool thread_priority_compare(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 #endif /* threads/thread.h */

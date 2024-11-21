@@ -18,9 +18,19 @@ void syscall_init(void)
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+static bool get_user(int *dst, const int *usrc)
+{
+    if (!is_user_vaddr(usrc))
+        return false;
+    int result;
+    asm volatile("movl %1, %0" : "=r"(result) : "m"(*usrc));
+    *dst = result;
+    return true;
+}
+
 static void is_valid_vaddr(const void *pointer)
 {
-    if (pointer == NULL || !is_user_vaddr(pointer) ||
+    if (pointer == NULL || !is_user_vaddr(pointer) || thread_current()->pagedir == NULL ||
         pagedir_get_page(thread_current()->pagedir, pointer) == NULL)
     {
         exit(-1);
@@ -37,11 +47,15 @@ static void is_valid_fd(int fdPos)
 
 static void syscall_handler(struct intr_frame *f)
 {
-
     int *esp = f->esp;
     is_valid_vaddr(esp);
 
     int syscall_number = *esp;
+
+    if (!get_user(&syscall_number, (int *)f->esp))
+    {
+        exit(-1);
+    }
     switch (syscall_number)
     {
         // project 01

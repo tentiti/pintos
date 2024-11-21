@@ -86,7 +86,7 @@ static tid_t allocate_tid(void);
    finishes. */
 void thread_init(void)
 {
-  
+
   ASSERT(intr_get_level() == INTR_OFF);
 
   lock_init(&tid_lock);
@@ -99,6 +99,10 @@ void thread_init(void)
 
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid();
+
+#ifdef USERPROG
+  initial_thread->pagedir = NULL;
+#endif
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -117,23 +121,34 @@ void thread_start(void)
   sema_down(&idle_started);
 }
 
-// aging happens here
+// aging, wake up 함수 -> 애초에 call 되게 고칠수가 없음.. 뭐지
+
+void thread_wake_up(void)
+{
+  int i;
+}
+
 void thread_aging(void)
 {
-  struct list_elem *e = list_begin(&ready_list);
+  // struct list_elem *e;
 
-  while (e != list_end(&ready_list))
-  {
-    struct thread *t = list_entry(e, struct thread, elem);
+  // for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
+  // {
+  //   struct thread *t = list_entry(e, struct thread, elem);
 
-    // 우선순위 증가
-    if (t->priority < PRI_MAX)
-    {
-      t->priority++;
-    }
+  //   // 디버깅 출력
+  //   if (!is_thread(t))
+  //   {
+  //     PANIC("Invalid thread in ready_list! Thread pointer: %p\n", t);
+  //   }
 
-    e = list_next(e);
-  }
+  //   if (t->priority < PRI_MAX)
+  //   {
+  //     t->priority++;
+  //   }
+  // }
+
+  // list_sort(&ready_list, thread_priority_compare, NULL);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -157,10 +172,11 @@ void thread_tick(void)
     intr_yield_on_return();
 
 #ifdef USERPROG
-  thread_wake_up();
+    // thread_wake_up();
 
-  if (thread_prior_aging == true)
-    thread_aging();
+    // if (thread_prior_aging == true)
+    //   thread_aging();
+
 #endif
 }
 
@@ -206,12 +222,11 @@ tid_t thread_create(const char *name, int priority,
   init_thread(t, name, priority);
 
 #ifdef USERPROG
+  list_init(&(t->child_threads));
+  list_push_back(&(thread_current()->child_threads), &(t->child_elem));
+  t->exit_status = 0;
 
   t->wait_called = false;
-
-  list_init(&(t->child_threads));
-  list_push_back(&(thread_current()->child_threads), &(t->current));
-  t->exit_status = 0;
   sema_init(&t->wait_sema, 0);
 
   t->executable_file = NULL;
@@ -295,6 +310,7 @@ void thread_unblock(struct thread *t)
   // list_push_back(&ready_list, &t->elem);
   list_insert_ordered(&ready_list, &t->elem, thread_priority_compare, NULL);
   t->status = THREAD_READY;
+
   intr_set_level(old_level);
 }
 
@@ -527,14 +543,15 @@ init_thread(struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
 #ifdef USERPROG
-  list_init(&initial_thread->child_threads);
-  initial_thread->exit_status = 0;
+  list_init(&t->child_threads);
+  t->exit_status = 0;
+  sema_init(&t->wait_sema, 0);
   for (int i = 0; i < 128; i++)
   {
-    initial_thread->fd[i] = NULL;
+    t->fd[i] = NULL;
   }
-  initial_thread->wait_called = false;
-  initial_thread->executable_file = NULL;
+  t->wait_called = false;
+  t->executable_file = NULL;
 #endif
 
   old_level = intr_disable();
