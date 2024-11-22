@@ -118,7 +118,7 @@ struct thread
    struct file *executable_file;
 
 #endif
-   // project 04
+   // project 03
    int wake_me_up_at; // time to wake up
    /* Owned by thread.c. */
    unsigned magic; /* Detects stack overflow. */
