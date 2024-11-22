@@ -130,25 +130,19 @@ void thread_wake_up(void)
 
 void thread_aging(void)
 {
-  // struct list_elem *e;
+  struct list_elem *e;
 
-  // for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
-  // {
-  //   struct thread *t = list_entry(e, struct thread, elem);
+  for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, elem);
 
-  //   // 디버깅 출력
-  //   if (!is_thread(t))
-  //   {
-  //     PANIC("Invalid thread in ready_list! Thread pointer: %p\n", t);
-  //   }
+    if (t->priority < PRI_MAX)
+    {
+      t->priority++;
+    }
+  }
 
-  //   if (t->priority < PRI_MAX)
-  //   {
-  //     t->priority++;
-  //   }
-  // }
-
-  // list_sort(&ready_list, thread_priority_compare, NULL);
+  list_sort(&ready_list, thread_priority_compare, NULL);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -172,10 +166,10 @@ void thread_tick(void)
     intr_yield_on_return();
 
 #ifdef USERPROG
-    // thread_wake_up();
+  thread_wake_up();
 
-    // if (thread_prior_aging == true)
-    //   thread_aging();
+  if (thread_prior_aging == true)
+    thread_aging();
 
 #endif
 }

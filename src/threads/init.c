@@ -260,10 +260,7 @@ parse_options(char **argv)
       thread_mlfqs = true;
 #ifdef USERPROG
     else if (!strcmp(name, "-aging"))
-    {
-      printf("Detected -aging option. Enabling thread_prior_aging.\n");
       thread_prior_aging = true;
-    }
 #endif
 #ifdef USERPROG
     else if (!strcmp(name, "-ul"))
