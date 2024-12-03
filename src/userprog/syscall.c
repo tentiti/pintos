@@ -50,7 +50,7 @@ static void syscall_handler(struct intr_frame *f)
     int *esp = f->esp;
     is_valid_vaddr(esp);
 
-    int syscall_number = *esp;
+    int syscall_number;
 
     if (!get_user(&syscall_number, (int *)f->esp))
     {
@@ -181,6 +181,7 @@ static void syscall_handler(struct intr_frame *f)
         break;
     }
 }
+
 
 void halt()
 {

@@ -164,9 +164,9 @@ int process_wait(tid_t child_tid UNUSED)
 
   // 종료 상태를 받아옴
   retStatus = child->exit_status;
-  sema_up(&child->cleanup_sema);
-
   list_remove(&child->child_elem);
+
+  sema_up(&child->cleanup_sema);
 
   return retStatus;
 }
