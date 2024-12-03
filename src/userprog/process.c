@@ -164,6 +164,7 @@ int process_wait(tid_t child_tid UNUSED)
 
   // 종료 상태를 받아옴
   retStatus = child->exit_status;
+  sema_up(&child->cleanup_sema);
 
   list_remove(&child->child_elem);
 
@@ -210,6 +211,7 @@ void process_exit(void)
   }
 
   sema_up(&cur->wait_sema);
+  sema_down(&cur->cleanup_sema);
 }
 
 /* Sets up the CPU for running user code in the current

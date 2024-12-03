@@ -541,6 +541,7 @@ init_thread(struct thread *t, const char *name, int priority)
   t->exit_status = 0;
   sema_init(&t->load_sema, 0);
   sema_init(&t->wait_sema, 0);
+  sema_init(&t->cleanup_sema, 0);
   for (int i = 0; i < 128; i++)
   {
     t->fd[i] = NULL;

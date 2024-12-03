@@ -112,7 +112,8 @@ struct thread
 
    struct semaphore load_sema;
    struct semaphore wait_sema; // make parent wait for me
-   bool wait_called;           // pass wait-twice
+   struct semaphore cleanup_sema; //exit
+   bool wait_called; // pass wait-twice
 
    // project 02
    struct file *fd[128];
