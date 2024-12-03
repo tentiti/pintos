@@ -35,15 +35,21 @@ static void is_valid_vaddr(const void *pointer)
     {
         exit(-1);
     }
-}
 
-static void is_valid_fd(int fdPos)
-{
-    if (thread_current()->fd[fdPos] == NULL)
+    if (pointer >= (void *)PHYS_BASE || pointer < (void *)0x08048000)
     {
         exit(-1);
     }
 }
+
+static void is_valid_fd(int fdPos)
+{
+    if (fdPos < 2 || fdPos >= 128 || thread_current()->fd[fdPos] == NULL)
+    {
+        exit(-1); // 유효하지 않은 파일 디스크립터는 종료 처리
+    }
+}
+
 
 static void syscall_handler(struct intr_frame *f)
 {
@@ -182,7 +188,6 @@ static void syscall_handler(struct intr_frame *f)
     }
 }
 
-
 void halt()
 {
     shutdown_power_off();
@@ -192,9 +197,10 @@ void exit(int status)
 {
     struct thread *cur = thread_current();
     cur->exit_status = status;
-    for (int i = 0; i < 128; i++)
+    for (int i = 2; i < 128; i++)
     {
         file_close(cur->fd[i]);
+        cur->fd[i] = NULL;
     }
     printf("%s: exit(%d)\n", cur->name, status);
     thread_exit();
@@ -202,11 +208,21 @@ void exit(int status)
 
 pid_t exec(const char *cmd_line)
 {
-    return process_execute(cmd_line);
+    is_valid_vaddr(cmd_line);
+    pid_t pid = process_execute(cmd_line);
+    if (pid == TID_ERROR)
+    {
+        return -1; // 실행 실패 시 -1 반환
+    }
+    return pid;
 }
 
 int wait(pid_t pid)
 {
+    if (pid < 0)
+    {
+        return -1; // 잘못된 pid
+    }
     return process_wait(pid);
 }
 
@@ -217,6 +233,10 @@ int write(int fd, const void *buffer, unsigned size)
     { // File descriptor 1 is stdout
         putbuf(buffer, size);
         return size;
+    }
+    else if (fd == 0)
+    {
+        return -1;
     }
     else
     {
@@ -240,6 +260,10 @@ int read(int fd, void *buffer, unsigned size)
             }
         }
         return i;
+    }
+    else if (fd == 1)
+    {
+        return -1;
     }
     else // files
     {
@@ -319,6 +343,7 @@ int open(const char *file)
 
 void close(int fd)
 {
+    is_valid_fd(fd);
     struct thread *cur = thread_current();
     file_close(cur->fd[fd]);
     cur->fd[fd] = NULL;
