@@ -217,7 +217,7 @@ tid_t thread_create(const char *name, int priority,
 
 #ifdef USERPROG
   list_init(&(t->child_threads));
-  list_push_back(&(thread_current()->child_threads), &(t->child_elem));
+  // list_push_back(&(thread_current()->child_threads), &(t->child_elem));
   t->exit_status = 0;
 
   t->wait_called = false;
@@ -539,6 +539,7 @@ init_thread(struct thread *t, const char *name, int priority)
 #ifdef USERPROG
   list_init(&t->child_threads);
   t->exit_status = 0;
+  sema_init(&t->load_sema, 0);
   sema_init(&t->wait_sema, 0);
   for (int i = 0; i < 128; i++)
   {

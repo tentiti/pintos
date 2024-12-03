@@ -62,7 +62,7 @@ tid_t process_execute(const char *file_name)
     struct thread *child = get_thread_by_tid(tid);
     if (child != NULL)
     {
-      sema_down(&child->wait_sema);
+      sema_down(&child->load_sema);
       if (child->exit_status == -1)
       {
         palloc_free_page(fn_copy);
@@ -101,9 +101,11 @@ start_process(void *file_name_)
   if (!success)
   {
     thread_current()->exit_status = -1;
-    sema_up(&thread_current()->wait_sema);
+    sema_up(&thread_current()->load_sema);
     thread_exit();
   }
+
+  sema_up(&thread_current()->load_sema);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in

@@ -110,6 +110,7 @@ struct thread
    // struct lock exit_lock;
    int exit_status;
 
+   struct semaphore load_sema;
    struct semaphore wait_sema; // make parent wait for me
    bool wait_called;           // pass wait-twice
 
