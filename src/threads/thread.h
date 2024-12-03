@@ -105,15 +105,16 @@ struct thread
    // project 01
    struct list_elem child_elem; // my parents' children
    struct list child_threads;   // my children
-   struct list_elem current;    // myself
+   struct list_elem current;
+   // myself
 
    // struct lock exit_lock;
    int exit_status;
 
    struct semaphore load_sema;
-   struct semaphore wait_sema; // make parent wait for me
-   struct semaphore cleanup_sema; //exit
-   bool wait_called; // pass wait-twice
+   struct semaphore wait_sema;    // make parent wait for me
+   struct semaphore cleanup_sema; // exit
+   bool wait_called;              // pass wait-twice
 
    // project 02
    struct file *fd[128];
