@@ -12,6 +12,8 @@ static long long page_fault_cnt;
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
 
+#define USER_VADDR_BOTTOM ((void *)0x08048000)
+
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -157,6 +159,10 @@ page_fault(struct intr_frame *f)
       exit(-1);
    }
 
+   if (!is_user_vaddr(fault_addr) || fault_addr < USER_VADDR_BOTTOM || fault_addr == NULL)
+   {
+      exit(-1);
+   }
    /* To implement virtual memory, delete the rest of the function
       body, and replace it with code that brings in the page to
       which fault_addr refers. */
