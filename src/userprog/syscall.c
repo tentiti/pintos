@@ -50,7 +50,6 @@ static void is_valid_fd(int fdPos)
     }
 }
 
-
 static void syscall_handler(struct intr_frame *f)
 {
     int *esp = f->esp;
