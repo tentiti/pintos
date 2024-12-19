@@ -36,6 +36,11 @@ static void is_valid_vaddr(const void *pointer)
         exit(-1);
     }
 
+    if (pagedir_get_page(thread_current()->pagedir, pointer) == NULL)
+    {
+        exit(-1);
+    }
+
     if (pointer >= (void *)PHYS_BASE || pointer < (void *)0x08048000)
     {
         exit(-1);
